@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Background Remover — Free, Unlimited, No Signup</title>
+  <meta name="description" content="Remove image backgrounds instantly with AI. 100% free, unlimited, no login. Powered by WebGPU + RMBG-1.4. Images never leave your device." />
+  <meta name="keywords" content="background remover free, remove background AI, transparent PNG, no watermark, unlimited, WebGPU" />
+  <meta property="og:title" content="AI Background Remover — Free, Unlimited, Private" />
+  <meta property="og:description" content="WebGPU-powered background removal in your browser. No server. No limit. No signup." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;
+      --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);
+      --text:#f0f0f0;--text2:#888;--text3:#444;
+      --purple:#7c5cfc;--purple2:#6344e0;--purple-bg:rgba(124,92,252,.12);
+      --green:#22c55e;--radius:14px;--radius-sm:8px;
+    }
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+    /* NAV */
+    nav{height:56px;padding:0 24px;border-bottom:.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(10,10,10,.92);backdrop-filter:blur(14px);z-index:20}
+    .logo{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;text-decoration:none;color:var(--text)}
+    .logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--purple),var(--purple2));border-radius:8px;display:flex;align-items:center;justify-content:center}
+    .logo-icon svg{width:16px;height:16px}
+    .nav-right{display:flex;align-items:center;gap:8px}
+    .nav-pill{font-size:11px;padding:3px 10px;border-radius:20px;border:.5px solid var(--border2);color:var(--text2)}
+    .nav-pill.green{border-color:rgba(34,197,94,.3);color:var(--green);background:rgba(34,197,94,.08)}
+    .device-badge{font-size:11px;padding:3px 10px;border-radius:20px;border:.5px solid rgba(124,92,252,.3);color:var(--purple);background:var(--purple-bg);display:none}
+    .device-badge.show{display:inline-flex;align-items:center;gap:4px}
+
+    /* HERO */
+    .hero{text-align:center;padding:52px 24px 36px;max-width:640px;margin:0 auto}
+    .hero-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--purple);border:.5px solid rgba(124,92,252,.35);background:var(--purple-bg);padding:4px 12px;border-radius:20px;margin-bottom:18px}
+    .hero h1{font-size:clamp(26px,5vw,44px);font-weight:600;letter-spacing:-.5px;line-height:1.12;margin-bottom:12px}
+    .hero h1 span{color:var(--purple)}
+    .hero p{font-size:15px;color:var(--text2);max-width:460px;margin:0 auto 16px}
+    .hero-stats{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+    .hstat{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:5px}
+    .hstat-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+    .tool-wrap{max-width:900px;margin:0 auto;padding:0 24px 80px}
+
+    /* MODEL BANNER */
+    .model-banner{display:none;background:var(--bg2);border:.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--text2);align-items:center;gap:10px}
+    .model-banner.show{display:flex}
+    .model-progress{flex:1;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
+    .model-progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--purple),#a78bfa);border-radius:2px;transition:width .4s}
+
+    /* DROP ZONE */
+    .drop-zone{border:1.5px dashed var(--border2);border-radius:var(--radius);background:var(--bg2);padding:52px 24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative}
+    .drop-zone:hover,.drop-zone.drag-over{border-color:var(--purple);background:var(--purple-bg)}
+    .drop-zone.disabled{opacity:.5;pointer-events:none}
+    .drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .drop-icon{width:54px;height:54px;margin:0 auto 14px;background:var(--purple-bg);border:.5px solid rgba(124,92,252,.3);border-radius:14px;display:flex;align-items:center;justify-content:center}
+    .drop-icon svg{width:24px;height:24px;stroke:var(--purple)}
+    .drop-zone h3{font-size:16px;font-weight:500;margin-bottom:6px}
+    .drop-zone p{font-size:13px;color:var(--text2)}
+    .formats{margin-top:12px;display:flex;justify-content:center;gap:6px}
+    .fmt-badge{font-size:11px;padding:3px 9px;border-radius:6px;border:.5px solid var(--border2);color:var(--text3)}
+
+    /* PROCESSING */
+    .processing-wrap{display:none;border-radius:var(--radius);background:var(--bg2);border:.5px solid var(--border);overflow:hidden}
+    .shimmer-preview{aspect-ratio:16/9;max-height:380px;position:relative;background:var(--bg3);overflow:hidden}
+    .shimmer-preview img{width:100%;height:100%;object-fit:contain;display:block;opacity:.3;filter:blur(3px)}
+    .shimmer-preview::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 20%,rgba(124,92,252,.15) 40%,rgba(255,255,255,.08) 50%,rgba(124,92,252,.15) 60%,transparent 80%);background-size:200% 100%;animation:sweep 1.6s ease-in-out infinite}
+    @keyframes sweep{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .processing-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:2}
+    .proc-spinner{width:40px;height:40px;border:2.5px solid rgba(124,92,252,.2);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .proc-label{font-size:14px;font-weight:500;color:#fff;background:rgba(10,10,10,.8);padding:6px 16px;border-radius:20px;backdrop-filter:blur(8px)}
+    .proc-sub{font-size:12px;color:var(--text2);background:rgba(10,10,10,.6);padding:4px 12px;border-radius:20px}
+    .progress-bar-wrap{padding:12px 20px 16px}
+    .progress-track{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
+    .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--purple),#a78bfa);transition:width .4s ease}
+    .progress-text{font-size:11px;color:var(--text3);margin-top:6px;display:flex;justify-content:space-between}
+
+    /* RESULT */
+    .result-wrap{display:none;border-radius:var(--radius);background:var(--bg2);border:.5px solid var(--border);overflow:hidden;animation:cardIn .35s ease}
+    @keyframes cardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+    /* BEFORE/AFTER SLIDER */
+    .slider-wrap{position:relative;aspect-ratio:16/9;max-height:420px;overflow:hidden;background:repeating-conic-gradient(#1a1a1a 0% 25%,#222 0% 50%) 0 0/20px 20px;cursor:ew-resize;user-select:none}
+    .slider-before,.slider-after{position:absolute;inset:0}
+    .slider-before img,.slider-after img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+    .slider-after{clip-path:inset(0 50% 0 0)}
+    .slider-divider{position:absolute;top:0;bottom:0;left:50%;width:2px;background:#fff;transform:translateX(-50%);pointer-events:none;z-index:3}
+    .slider-handle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:4;pointer-events:none}
+    .slider-handle svg{width:18px;height:18px}
+    .slider-label{position:absolute;bottom:12px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;background:rgba(0,0,0,.6);color:#fff;letter-spacing:.04em;z-index:2;pointer-events:none}
+    .label-before{left:12px}.label-after{right:12px}
+
+    /* RESULT FOOTER */
+    .result-footer{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .result-info{font-size:13px;color:var(--text2)}
+    .result-info strong{color:var(--text);font-size:14px;display:block}
+    .result-actions{display:flex;gap:8px}
+
+    /* BG COLOR PICKER */
+    .bg-options{padding:0 18px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .bg-label{font-size:12px;color:var(--text3)}
+    .bg-swatch{width:24px;height:24px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
+    .bg-swatch.active,.bg-swatch:hover{border-color:var(--purple)}
+    .bg-swatch.transparent{background:repeating-conic-gradient(#333 0% 25%,#555 0% 50%) 0 0/10px 10px}
+    .bg-custom{width:24px;height:24px;border-radius:6px;cursor:pointer;border:2px solid var(--border2);overflow:hidden;padding:0}
+    .bg-custom input{width:32px;height:32px;border:none;cursor:pointer;transform:scale(1.3);margin:-3px}
+
+    /* BUTTONS */
+    .btn{height:40px;padding:0 18px;border-radius:var(--radius-sm);border:.5px solid var(--border2);background:var(--bg3);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .15s,transform .1s}
+    .btn:hover{background:#222}.btn:active{transform:scale(.97)}
+    .btn-primary{background:var(--purple);border-color:var(--purple);color:#fff}
+    .btn-primary:hover{background:var(--purple2)}
+    .btn-ghost{background:transparent;border-color:var(--border);color:var(--text2)}
+    .btn-ghost:hover{background:var(--bg3);color:var(--text)}
+
+    .error-box{display:none;margin-top:14px;padding:12px 16px;background:rgba(239,68,68,.1);border:.5px solid rgba(239,68,68,.3);border-radius:var(--radius-sm);font-size:13px;color:#fca5a5}
+
+    /* PRIVACY */
+    .privacy-wrap{max-width:700px;margin:40px auto 0;padding:0 24px}
+    .privacy-card{background:rgba(34,197,94,.06);border:.5px solid rgba(34,197,94,.2);border-radius:var(--radius);padding:20px 24px;display:flex;align-items:flex-start;gap:16px}
+    .privacy-icon{width:36px;height:36px;background:rgba(34,197,94,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .privacy-icon svg{width:18px;height:18px;stroke:var(--green)}
+    .privacy-card h3{font-size:14px;font-weight:500;color:var(--green);margin-bottom:4px}
+    .privacy-card p{font-size:13px;color:var(--text2);line-height:1.5}
+
+    /* HOW IT WORKS */
+    .how-wrap{max-width:700px;margin:48px auto 0;padding:0 24px;text-align:center}
+    .section-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:24px;font-weight:500}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .step{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--radius);padding:20px 16px}
+    .step-icon{width:34px;height:34px;border-radius:10px;background:var(--purple-bg);border:.5px solid rgba(124,92,252,.25);display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+    .step-icon svg{width:17px;height:17px;stroke:var(--purple)}
+    .step h4{font-size:13px;font-weight:500;margin-bottom:5px}
+    .step p{font-size:12px;color:var(--text2);line-height:1.5}
+
+    /* USE CASES */
+    .uses-wrap{max-width:900px;margin:48px auto 0;padding:0 24px}
+    .uses-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+    .use-card{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center}
+    .use-emoji{font-size:22px;margin-bottom:7px}
+    .use-card h4{font-size:13px;font-weight:500;margin-bottom:3px}
+    .use-card p{font-size:11px;color:var(--text2)}
+
+    /* FAQ */
+    .faq-wrap{max-width:640px;margin:48px auto 0;padding:0 24px 80px}
+    .faq-wrap h2{font-size:20px;font-weight:600;text-align:center;margin-bottom:22px}
+    .faq-item{border-bottom:.5px solid var(--border);padding:14px 0}
+    .faq-item:first-of-type{border-top:.5px solid var(--border)}
+    .faq-q{font-size:14px;font-weight:500;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .faq-q::after{content:'+';font-size:18px;color:var(--text3);flex-shrink:0}
+    details[open] .faq-q::after{content:'−'}
+    .faq-a{font-size:13px;color:var(--text2);margin-top:9px;line-height:1.65}
+
+    footer{border-top:.5px solid var(--border);padding:20px 24px;text-align:center;font-size:12px;color:var(--text3)}
+
+    @media(max-width:600px){
+      .steps{grid-template-columns:1fr}
+      .result-footer{flex-direction:column;align-items:flex-start}
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    BG<span style="color:var(--purple)">Erase</span>.ai
+  </a>
+  <div class="nav-right">
+    <span class="device-badge" id="deviceBadge">⚡ WebGPU</span>
+    <span class="nav-pill green">Unlimited Free</span>
+    <span class="nav-pill">Runs in Browser</span>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-tag">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    WebGPU · No API · No Server · No Limit
+  </div>
+  <h1>Remove image<br/><span>backgrounds</span> with AI</h1>
+  <p>RMBG-1.4 model in your browser. WebGPU = half-second. WASM fallback = 2-5 seconds. No uploads. No limit. Private.</p>
+  <div class="hero-stats">
+    <div class="hstat"><div class="hstat-dot"></div>100% free forever</div>
+    <div class="hstat"><div class="hstat-dot"></div>Unlimited images</div>
+    <div class="hstat"><div class="hstat-dot"></div>Images stay on device</div>
+    <div class="hstat"><div class="hstat-dot"></div>No signup</div>
+  </div>
+</section>
+
+<div class="tool-wrap">
+  <!-- MODEL LOADING BANNER -->
+  <div class="model-banner" id="modelBanner">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <span id="modelStatus">Initializing AI engine...</span>
+    <div class="model-progress"><div class="model-progress-fill" id="modelProgressFill"></div></div>
+    <span id="modelPct" style="font-size:11px;white-space:nowrap;min-width:32px;text-align:right">0%</span>
+  </div>
+
+  <!-- DROP ZONE -->
+  <div class="drop-zone disabled" id="dropZone">
+    <input type="file" id="fileInput" accept="image/jpeg,image/jpg,image/png,image/webp" multiple />
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+    </div>
+    <h3 id="dropTitle">Loading AI model...</h3>
+    <p id="dropSub">Please wait (~45MB, cached after first load)</p>
+    <div class="formats">
+      <span class="fmt-badge">JPG</span><span class="fmt-badge">PNG</span>
+      <span class="fmt-badge">WebP</span><span class="fmt-badge">Max 20MB</span>
+    </div>
+  </div>
+
+  <div class="error-box" id="errBox"></div>
+
+  <!-- PROCESSING -->
+  <div class="processing-wrap" id="processingWrap">
+    <div class="shimmer-preview">
+      <img id="previewImg" src="" alt="" />
+      <div class="processing-overlay">
+        <div class="proc-spinner"></div>
+        <div class="proc-label" id="procLabel">Removing background...</div>
+        <div class="proc-sub" id="procSub">AI running in your browser</div>
+      </div>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text">
+        <span id="progressStep">Processing</span>
+        <span id="progressPct">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="result-wrap" id="resultWrap">
+    <!-- BG COLOR PICKER -->
+    <div class="bg-options" id="bgOptions">
+      <span class="bg-label">Preview background:</span>
+      <div class="bg-swatch transparent active" title="Transparent" onclick="setBg('transparent', this)"></div>
+      <div class="bg-swatch" style="background:#fff" title="White" onclick="setBg('#ffffff', this)"></div>
+      <div class="bg-swatch" style="background:#000" title="Black" onclick="setBg('#000000', this)"></div>
+      <div class="bg-swatch" style="background:#1a1aff" title="Blue" onclick="setBg('#1a1aff', this)"></div>
+      <div class="bg-swatch" style="background:#22c55e" title="Green" onclick="setBg('#22c55e', this)"></div>
+      <div class="bg-swatch" style="background:#f43f5e" title="Red" onclick="setBg('#f43f5e', this)"></div>
+      <div class="bg-custom" title="Custom color">
+        <input type="color" id="customColor" value="#7c5cfc" oninput="setBg(this.value, null)" />
+      </div>
+    </div>
+
+    <!-- BEFORE/AFTER SLIDER -->
+    <div class="slider-wrap" id="sliderWrap">
+      <div class="slider-before"><img id="beforeImg" src="" alt="Original" /></div>
+      <div class="slider-after" id="sliderAfter">
+        <canvas id="resultCanvas"></canvas>
+      </div>
+      <div class="slider-divider" id="sliderDivider"></div>
+      <div class="slider-handle" id="sliderHandle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/><polyline points="9 6 15 12 9 18"/>
+        </svg>
+      </div>
+      <span class="slider-label label-before">ORIGINAL</span>
+      <span class="slider-label label-after">BG REMOVED</span>
+    </div>
+
+    <div class="result-footer">
+      <div class="result-info">
+        <strong id="resultFilename">result.png</strong>
+        <span id="resultMeta"></span>
+      </div>
+      <div class="result-actions">
+        <button class="btn btn-ghost" onclick="resetTool()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+          New image
+        </button>
+        <button class="btn btn-primary" id="downloadBtn" onclick="downloadResult()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download PNG
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRIVACY -->
+<div class="privacy-wrap">
+  <div class="privacy-card">
+    <div class="privacy-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+    <div>
+      <h3>100% Private — Images Never Leave Your Device</h3>
+      <p>RMBG-1.4 runs in a Web Worker in your browser using WebGPU (or WASM fallback). No uploads, no servers, no tracking. Works offline after first load.</p>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="how-wrap" style="margin-top:48px">
+  <p class="section-label">How it works</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+      <h4>Upload image</h4><p>Drop any JPG, PNG, or WebP up to 20MB</p>
+    </div>
+    <div class="step">
+      <div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+      <h4>AI removes background</h4><p>WebGPU = ~0.5s · WASM fallback = 2-5s · Non-blocking UI</p>
+    </div>
+    <div class="step">
+      <div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+      <h4>Download PNG</h4><p>Transparent PNG. Change background color before download.</p>
+    </div>
+  </div>
+</div>
+
+<!-- USE CASES -->
+<div class="uses-wrap">
+  <p class="section-label" style="text-align:center;margin-bottom:16px">Perfect for</p>
+  <div class="uses-grid">
+    <div class="use-card"><div class="use-emoji">🛍️</div><h4>E-commerce</h4><p>White background product photos</p></div>
+    <div class="use-card"><div class="use-emoji">🎨</div><h4>Design</h4><p>Canva, Figma, Photoshop cutouts</p></div>
+    <div class="use-card"><div class="use-emoji">📸</div><h4>Portraits</h4><p>Profile pics, LinkedIn, passport</p></div>
+    <div class="use-card"><div class="use-emoji">🎬</div><h4>Content</h4><p>YT thumbnails, stickers, reels</p></div>
+    <div class="use-card"><div class="use-emoji">💼</div><h4>Marketing</h4><p>Ads, banners, social posts</p></div>
+    <div class="use-card"><div class="use-emoji">🖨️</div><h4>Print</h4><p>Logos, merch, packaging</p></div>
+  </div>
+</div>
+
+<!-- FAQ -->
+<div class="faq-wrap">
+  <h2>Frequently asked questions</h2>
+  <details class="faq-item">
+    <summary class="faq-q">Is this really free and unlimited?</summary>
+    <p class="faq-a">Yes, 100% free and unlimited. The AI model runs in your browser — no server to pay for. No account, no credit card, no limits ever.</p>
+  </details>
+  <details class="faq-item">
+    <summary class="faq-q">What is WebGPU and why does it matter?</summary>
+    <p class="faq-a">WebGPU is a modern browser API that uses your GPU for AI inference. On supported browsers (Chrome 113+), processing takes ~0.5 seconds even for 4K images. On other browsers, WASM is used automatically (2-5 seconds).</p>
+  </details>
+  <details class="faq-item">
+    <summary class="faq-q">Why does first use take time?</summary>
+    <p class="faq-a">First time, RMBG-1.4 quantized model (~45MB) downloads to your browser cache. After that it's instant — even works offline.</p>
+  </details>
+  <details class="faq-item">
+    <summary class="faq-q">Are my images stored anywhere?</summary>
+    <p class="faq-a">No. Everything runs locally in a Web Worker in your browser. Images never leave your device — no uploads, no cloud, no tracking.</p>
+  </details>
+  <details class="faq-item">
+    <summary class="faq-q">Which browsers support WebGPU?</summary>
+    <p class="faq-a">Chrome 113+, Edge 113+, and Opera 99+ support WebGPU. Safari has partial support. Firefox doesn't yet. On unsupported browsers, the tool automatically uses WASM — still works great.</p>
+  </details>
+</div>
+
+<footer>
+  <p>© 2025 BGErase.ai · Free Unlimited AI Background Remover · RMBG-1.4 (BRIA AI) · Transformers.js · WebGPU + WASM · No server, no limits</p>
+</footer>
+
+<script>
+// ── Web Worker setup ──────────────────────────────────────────
+const worker = new Worker('worker.js', { type: 'module' });
+
+let isReady      = false;
+let currentFile  = null;
+let resultPixels = null; // Uint8ClampedArray
+let resultW      = 0;
+let resultH      = 0;
+let currentBg    = 'transparent';
+
+// ── Worker messages ───────────────────────────────────────────
+worker.onmessage = ({ data }) => {
+  switch (data.type) {
+
+    case 'progress':
+      setModelProgress(data.pct, data.message);
+      break;
+
+    case 'status':
+      setModelProgress(data.pct || 5, data.message);
+      break;
+
+    case 'ready':
+      isReady = true;
+      document.getElementById('modelBanner').classList.remove('show');
+      document.getElementById('dropZone').classList.remove('disabled');
+      document.getElementById('dropTitle').textContent = 'Drop your image here';
+      document.getElementById('dropSub').textContent   = 'or click to browse from your device';
+      // Show WebGPU badge if GPU used
+      if (data.device === 'webgpu') {
+        const badge = document.getElementById('deviceBadge');
+        badge.textContent = '⚡ WebGPU Active';
+        badge.classList.add('show');
+      }
+      break;
+
+    case 'processing':
+      setProgress(data.pct, data.message, '');
+      break;
+
+    case 'done': {
+      const pixels = new Uint8ClampedArray(data.imageData);
+      resultPixels = pixels;
+      resultW      = data.width;
+      resultH      = data.height;
+      drawResult(pixels, data.width, data.height, currentBg);
+      showResult();
+      break;
+    }
+
+    case 'error':
+      document.getElementById('processingWrap').style.display = 'none';
+      document.getElementById('dropZone').style.display       = 'block';
+      showError(data.message);
+      break;
+  }
+};
+
+worker.onerror = (e) => showError('Worker error: ' + e.message);
+
+// ── Model progress ────────────────────────────────────────────
+function setModelProgress(pct, msg) {
+  document.getElementById('modelBanner').classList.add('show');
+  document.getElementById('modelStatus').textContent            = msg || '';
+  document.getElementById('modelProgressFill').style.width      = (pct || 0) + '%';
+  document.getElementById('modelPct').textContent               = (pct || 0) + '%';
+}
+
+// ── Drag & Drop ───────────────────────────────────────────────
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+// ── Handle file ───────────────────────────────────────────────
+function handleFile(file) {
+  hideError();
+  if (!['image/jpeg','image/jpg','image/png','image/webp'].includes(file.type)) {
+    showError('Please upload a JPG, PNG, or WebP image.'); return;
+  }
+  if (file.size > 20 * 1024 * 1024) { showError('Image too large. Max 20MB.'); return; }
+  if (!isReady) { showError('AI model is still loading. Please wait.'); return; }
+
+  currentFile = file;
+  processFile(file);
+}
+
+// ── Process file ──────────────────────────────────────────────
+function processFile(file) {
+  const url = URL.createObjectURL(file);
+  document.getElementById('previewImg').src = url;
+  document.getElementById('dropZone').style.display        = 'none';
+  document.getElementById('processingWrap').style.display  = 'block';
+  document.getElementById('resultWrap').style.display      = 'none';
+  setProgress(5, 'Reading image...', 'Loading pixels');
+
+  // Draw image to offscreen canvas to get ImageData
+  const img = new Image();
+  img.onload = () => {
+    const canvas  = document.createElement('canvas');
+    canvas.width  = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx     = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // Send pixels to worker (transferable — zero copy)
+    const buf = imageData.data.buffer.slice(0); // clone
+    worker.postMessage({
+      type:      'process',
+      imageData: buf,
+      width:     canvas.width,
+      height:    canvas.height,
+      id:        Date.now(),
+    }, [buf]);
+
+    URL.revokeObjectURL(url);
+  };
+  img.onerror = () => showError('Could not read image file.');
+  img.src = url;
+}
+
+// ── Draw result to canvas (with bg color) ─────────────────────
+function drawResult(pixels, w, h, bg) {
+  const canvas  = document.getElementById('resultCanvas');
+  canvas.width  = w;
+  canvas.height = h;
+  canvas.style.width  = '100%';
+  canvas.style.height = '100%';
+  canvas.style.objectFit = 'contain';
+  canvas.style.display   = 'block';
+
+  const ctx = canvas.getContext('2d');
+
+  if (bg !== 'transparent') {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+  } else {
+    ctx.clearRect(0, 0, w, h);
+  }
+
+  // Draw masked image
+  const imgData = new ImageData(new Uint8ClampedArray(pixels), w, h);
+  const tmp     = document.createElement('canvas');
+  tmp.width = w; tmp.height = h;
+  tmp.getContext('2d').putImageData(imgData, 0, 0);
+  ctx.drawImage(tmp, 0, 0);
+}
+
+// ── Background color picker ───────────────────────────────────
+window.setBg = function(color, swatch) {
+  currentBg = color;
+  // Update active swatch
+  document.querySelectorAll('.bg-swatch').forEach(s => s.classList.remove('active'));
+  if (swatch) swatch.classList.add('active');
+  // Redraw if result available
+  if (resultPixels) drawResult(resultPixels, resultW, resultH, color);
+};
+
+// ── Show result ───────────────────────────────────────────────
+function showResult() {
+  document.getElementById('processingWrap').style.display = 'none';
+
+  // Set before image
+  const beforeUrl = URL.createObjectURL(currentFile);
+  document.getElementById('beforeImg').src = beforeUrl;
+
+  // Filename + meta
+  const name = currentFile.name.replace(/\.[^.]+$/, '') + '-bg-removed.png';
+  document.getElementById('resultFilename').textContent = name;
+  document.getElementById('resultMeta').textContent =
+    `${resultW}×${resultH}px · Transparent PNG · ${(currentFile.size / 1024).toFixed(0)}KB original`;
+
+  document.getElementById('resultWrap').style.display = 'block';
+  document.getElementById('resultWrap').scrollIntoView({ behavior:'smooth', block:'start' });
+
+  initSlider();
+}
+
+// ── Before/After slider ───────────────────────────────────────
+function initSlider() {
+  const wrap  = document.getElementById('sliderWrap');
+  const after = document.getElementById('sliderAfter');
+  const div   = document.getElementById('sliderDivider');
+  const hand  = document.getElementById('sliderHandle');
+  let drag = false;
+
+  function setPos(x) {
+    const r   = wrap.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(100, ((x - r.left) / r.width) * 100));
+    after.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+    div.style.left = hand.style.left = pct + '%';
+  }
+  after.style.clipPath = 'inset(0 50% 0 0)';
+
+  wrap.addEventListener('mousedown',  e => { drag = true; setPos(e.clientX); });
+  wrap.addEventListener('touchstart', e => { drag = true; setPos(e.touches[0].clientX); }, {passive:true});
+  window.addEventListener('mousemove',  e => { if (drag) setPos(e.clientX); });
+  window.addEventListener('touchmove',  e => { if (drag) setPos(e.touches[0].clientX); }, {passive:true});
+  window.addEventListener('mouseup',  () => drag = false);
+  window.addEventListener('touchend', () => drag = false);
+}
+
+// ── Download ──────────────────────────────────────────────────
+window.downloadResult = function() {
+  if (!resultPixels) return;
+  // Always download transparent PNG regardless of preview bg
+  const canvas = document.createElement('canvas');
+  canvas.width = resultW; canvas.height = resultH;
+  const ctx = canvas.getContext('2d');
+  ctx.putImageData(new ImageData(new Uint8ClampedArray(resultPixels), resultW, resultH), 0, 0);
+
+  const name = (currentFile?.name?.replace(/\.[^.]+$/, '') || 'image') + '-bg-removed.png';
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }, 'image/png');
+};
+
+// ── Reset ─────────────────────────────────────────────────────
+window.resetTool = function() {
+  resultPixels = null; currentFile = null; resultW = 0; resultH = 0;
+  ['resultWrap','processingWrap'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('dropZone').style.display = 'block';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('progressFill').style.width = '0%';
+  window.scrollTo({top:0, behavior:'smooth'});
+};
+
+// ── Helpers ───────────────────────────────────────────────────
+function setProgress(pct, label, sub) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent  = pct + '%';
+  document.getElementById('progressStep').textContent = label;
+  document.getElementById('procLabel').textContent    = label;
+  if (sub !== undefined) document.getElementById('procSub').textContent = sub;
+}
+function showError(msg) {
+  const e = document.getElementById('errBox');
+  e.textContent = '⚠ ' + msg; e.style.display = 'block';
+}
+function hideError() { document.getElementById('errBox').style.display = 'none'; }
+</script>
+</body>
+</html>
